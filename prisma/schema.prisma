@@ -1,0 +1,68 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+model User {
+  id            String       @id @default(uuid())
+  email         String       @unique
+  fullName      String?
+  avatarUrl     String?
+  createdAt     DateTime     @default(now())
+  memberships   Membership[]
+}
+
+model Organization {
+  id                    String        @id @default(uuid())
+  name                  String
+  slug                  String        @unique
+  stripeCustomerId      String?       @unique
+  stripeSubscriptionId  String?       @unique
+  subscriptionTier      String        @default("STARTER") // STARTER, GROWTH, ENTERPRISE
+  subscriptionStatus    SubscriptionStatus @default(TRIALING)
+  trialEndsAt           DateTime?
+  memberships           Membership[]
+  usageRecords          UsageRecord[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Membership {
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role            OrgRole       @default(MEMBER)
+  joinedAt        DateTime      @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+model UsageRecord {
+  id              String        @id @default(uuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metricName      String        // e.g. "api_calls", "ai_tokens"
+  quantity        Int
+  recordedAt      DateTime      @default(now())
+}

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: revoflux_saas_db
+    environment:
+      POSTGRES_USER: saas_admin
+      POSTGRES_PASSWORD: saas_secret_pass
+      POSTGRES_DB: revoflux_saas
+    ports:
+      - "5435:5432"
+    volumes:
+      - saas_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    container_name: revoflux_saas_app
+    restart: always
+    ports:
+      - "3002:3000"
+    environment:
+      DATABASE_URL: "postgresql://saas_admin:saas_secret_pass@db:5432/revoflux_saas?schema=public"
+    depends_on:
+      - db
+
+volumes:
+  saas_data:
